@@ -1,51 +1,41 @@
-from flask import Flask, jsonify
-import random, datetime, hashlib
+from flask import Flask
+import random
+from gtts import gTTS
+from PIL import Image, ImageDraw
+from moviepy.editor import ImageClip, AudioFileClip
 
 app = Flask(__name__)
 
-def kahani_banao():
-    today = str(datetime.date.today())
-    seed = int(hashlib.md5(today.encode()).hexdigest(), 16) % 10000
-    random.seed(seed)
-    guddu = random.choice([
-        "Bholu, aaj maine samosa laya hai!",
-        "Bholu, aaj video banana hai, jaldi uth!",
-        "Bholu, aaj Lala ne bola hai viral video banana hai!",
-        "Bholu, aaj 9 baje Mission ON hai!"
-    ])
-    bholu = random.choice([
-        "Guddu, mujhe 9 baje uthana, main so raha hu!",
-        "Samosa kahan hai? Mujhe to dikha hi nahi!",
-        "Maine nahi khaya, ye to hawa me udd gaya!",
-        "Guddu, pehle samosa de, fir video banayenge!"
-    ])
-    chintu = random.choice([
-        "Main aa gaya! Chintu is here!",
-        "Mujhe bhi samosa chahiye!",
-        "Chalo, aaj ka video main banata hu!"
-    ])
-    twist = random.choice([
-        "Plate khaali nikli! Samosa gayab!",
-        "Bholu ke muh me samosa tha, pakda gaya!",
-        "Chintu ne chupke se samosa kha liya!"
-    ])
-    random.seed()
-    kahani = "Guddu: " + guddu + " Bholu: " + bholu + " Chintu: " + chintu + " Twist: " + twist + " End: Lala, comment me batao, Samosa kisne khaya?"
-    return kahani
+def get_story():
+    stories = [
+        "Guddu ne Bholu se kaha, aaj samosa free hai! Bholu daud ke gaya, waha Chintu pehle se khada tha! Fir teeno me samose ke liye ladai ho gayi!",
+        "Bholu ne Guddu ka samosa chura liya! Guddu bola, mera samosa wapas kar! Chintu bola, dono ka aadha-aadha kar lo! Fir teeno ne mil ke kha liya!",
+        "Guddu bola, aaj main YouTube star banunga! Bholu bola, pehle samosa toh khila! Chintu hasne laga, tum dono se na ho payega!"
+    ]
+    return random.choice(stories)
+
+def make_video(story, num):
+    tts = gTTS(text=story, lang='hi')
+    tts.save("voice.mp3")
+    img = Image.new('RGB', (1080, 1920), color=(255, 200, 0))
+    d = ImageDraw.Draw(img)
+    d.text((80, 800), "GUDDU BHOLU", fill=(0, 0, 0))
+    d.text((80, 900), "Samosa Mission", fill=(0, 0, 0))
+    img.save("frame.jpg")
+    audio = AudioFileClip("voice.mp3")
+    clip = ImageClip("frame.jpg").set_duration(audio.duration).set_audio(audio)
+    clip.write_videofile(f"video_{num}.mp4", fps=24, codec='libx264', audio_codec='aac')
+    return f"video_{num}.mp4"
 
 @app.route('/')
 def home():
-    kahani = kahani_banao()
-    return "<h1>LALA MISSION 9 BAJE - FULL AUTO ON</h1><p>" + kahani + "</p><p><a href='/run-auto'>AUTO CHALAO</a></p>"
+    return "Lala Mission ON Hai! Video System Ready!"
 
 @app.route('/run-auto')
 def run_auto():
-    kahani = kahani_banao()
-    return jsonify({"status": "FULL AUTO HO GAYA", "kahani": kahani, "date": str(datetime.date.today())})
-
-@app.route('/today')
-def today():
-    return jsonify({"kahani": kahani_banao(), "date": str(datetime.date.today())})
+    story = get_story()
+    video = make_video(story, random.randint(1, 1000))
+    return f"KAHANI: {story} <br> VIDEO BAN GAYA: {video} <br> Ab YouTube Key lagate hi ye auto upload hoga!"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    app.run()
