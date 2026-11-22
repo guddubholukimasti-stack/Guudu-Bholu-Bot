@@ -1,20 +1,17 @@
-name: Auto Video
+name: Daily Guddu Bholu
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '30 2 * * *'
+    - cron: '30 3 * * *'
+  workflow_dispatch:
 jobs:
-  make:
+  make-and-upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: pip install Pillow gTTS moviepy
+      - run: pip install Pillow gTTS moviepy google-api-python-client google-auth
       - run: python make_video.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: video
-          path: final_video.mp4
+        env:
+          YOUTUBE_TOKEN: ${{ secrets.YOUTUBE_TOKEN }}
