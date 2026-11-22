@@ -1,32 +1,48 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
+import random
+
 app = Flask(__name__)
 
-def guddu_reply(msg):
-    m = msg.lower()
-    if "hi" in m or "hello" in m:
-        return "Arre aa gaya mera bhai! Guddu Bholu yaha hai! Bol kya haal hai?"
-    if "naam" in m or "kaun" in m:
-        return "Main Guddu Bholu hu! Lala Mission pe hu!"
-    if "bye" in m:
-        return "Arre ruk ja yaar, abhi to aaya hai!"
-    return "Samajh gaya! Tune bola - " + msg + " - Aur bata?"
+HTML = """
+<h1 style="text-align:center;">🤖 GUDDU-BHOLOU BOT LIVE HAI!</h1>
+<p style="text-align:center;">LALA MISSION 9 BAJE - ON HAI!</p>
+<div style="text-align:center;">
+<input id="msg" placeholder="Guddu se kuch bolo..." style="padding:10px; width:70%;">
+<button onclick="send()" style="padding:10px;">Bhejo</button>
+<p id="reply"></p>
+</div>
+<script>
+async function send(){
+  let m = document.getElementById('msg').value;
+  let r = await fetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({msg:m})});
+  let d = await r.json();
+  document.getElementById('reply').innerText = "Guddu: " + d.reply;
+}
+</script>
+"""
 
-@app.route("/")
+@app.route('/')
 def home():
-    html = "<html><head><meta name=viewport content=width=device-width,initial-scale=1>"
-    html += "<style>body{font-family:sans-serif;background:#111;color:white;padding:10px}h2{text-align:center;color:#ffcc00}#box{height:70vh;overflow-y:auto;background:#222;padding:10px;border-radius:10px}.me{text-align:right;color:#00ff88;margin:8px}.bot{color:#ffcc00;margin:8px}input{width:75%;padding:12px;border-radius:10px;border:none}button{width:20%;padding:12px;background:#ffcc00;border:none;border-radius:10px}</style></head>"
-    html += "<body><h2>Guddu Bholu - Lala Mission ON</h2>"
-    html += "<div id=box><div class=bot><b>Guddu:</b> Aa gaya! Bol kya baat hai?</div></div><br>"
-    html += "<input id=m placeholder=Yaha-likh><button onclick=send()>Bhej</button>"
-    html += "<script>async function send(){let inp=document.getElementById('m');let txt=inp.value;if(!txt)return;let box=document.getElementById('box');box.innerHTML+='<div class=me><b>Tu:</b> '+txt+'</div>';inp.value='';let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:txt})});let d=await r.json();box.innerHTML+='<div class=bot><b>Guddu:</b> '+d.reply+'</div>';box.scrollTop=box.scrollHeight;}</script></body></html>"
-    return html
+    return render_template_string(HTML)
 
-@app.route("/chat", methods=["POST"])
+@app.route('/chat', methods=['POST'])
 def chat():
-    data = request.get_json()
-    msg = data.get("msg", "")
-    return jsonify({"reply": guddu_reply(msg)})
+    msg = request.json.get('msg','').lower()
+    if 'samosa' in msg:
+        reply = "Arre Lala! Samosa sunte hi Bholu ke muh me paani aa gaya! Bholu bola - Ek khaunga, baaki sab chhupa dunga!"
+    elif 'bholu' in msg:
+        reply = "Bholu to abhi so raha hai! Usne bola - Guddu, mujhe 9 baje uthana, video banani hai!"
+    elif 'hi' in msg or 'hello' in msg or 'hey' in msg:
+        reply = "Haan Malik! Main Guddu hu! LALA MISSION 9 BAJE ON hai! Bol, kya video banau aaj?"
+    elif 'video' in msg:
+        reply = "Video to main roz 9 baje bana dunga! Tu bas Malik banke views ginna!"
+    else:
+        reply = random.choice([
+            "Hahaha! Ye to mast bola Lala! Bholu ko batata hu, wo bhi hasega!",
+            "Arre wah! Tu to bada chalak nikla! Chal, ispe ek video bana dete hai!",
+            "Samajh gaya Malik! Ye wali baat kal ki kahani me dal deta hu!"
+        ])
+    return jsonify({"reply": reply})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-    
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
