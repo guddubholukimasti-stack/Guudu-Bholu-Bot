@@ -88,9 +88,4 @@ request = youtube.videos().insert(
 )
 resp = request.execute()
 print(f"UPLOAD HO GAYA! Video ID: {resp['id']}")
-      - name: Save video
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: video
-          path: output/*.mp4
+      
