@@ -1,11 +1,10 @@
 import os, random, textwrap, datetime, math, json
 from PIL import Image, ImageDraw, ImageFont
 
-# 1. KAHANI - 5 KEY ROTATION - PERMANENT SOLUTION
+# 1. KAHANI - 6 KEY ROTATION
 def get_new_story():
     import google.generativeai as genai
     
-    # Saari 6 key ikatthi karo
     all_keys = []
     for suffix in ["", "_1", "_2", "_3", "_4", "_5"]:
         k = os.environ.get(f"GEMINI_API_KEY{suffix}")
@@ -19,12 +18,12 @@ def get_new_story():
     topic = random.choice(topics)
     prompt = f"""Guddu aur Bholu ki funny Hindi kahani likho. Topic: {topic}. Sirf is format me do: TITLE: Guddu Bholu Ka {topic} Wala Kamaal STORY: 150 word ki funny kahani. 6 chhote scene me. Guddu hoshiyar, Bholu bhola. End me - subscribe karo."""
     
-    # HAR KEY KO TRY KARO
+    # NAYE MODEL - 2026 me chalu wale
+    to_try = ['gemini-3.8-flash', 'gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.5-flash-lite']
     for key_no, api_key in enumerate(all_keys):
         try:
             print(f"--- Key {key_no+1} try kar raha hu ---")
             genai.configure(api_key=api_key)
-            to_try = ['gemini-2.0-flash','gemini-2.5-flash','gemini-1.5-flash','gemini-2.0-flash-lite','gemini-1.5-flash-8b']
             for model_name in to_try:
                 try:
                     print(f"Trying: Key {key_no+1} + {model_name}")
@@ -100,7 +99,9 @@ for i in range(6):
 
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 audio = AudioFileClip("output/audio.mp3")
-total_dur = max(55, min(60, audio.duration))
+# FIX: Video ki lambai hamesha Audio jitni hi hogi, 55-60 force nahi karenge
+total_dur = audio.duration
+print(f"Audio Duration: {total_dur} sec, Video bhi utna hi banega")
 scene_dur = total_dur / 6
 clips = []
 for si, scene_text in enumerate(scenes):
@@ -120,21 +121,4 @@ for si, scene_text in enumerate(scenes):
         d.text((80, 1650), f"{title} #Shorts", fill=(255,255,255), font=font_small, stroke_width=2, stroke_fill=(0,0,0))
         path = f"output/frame_{si}_{f}.jpg"
         img.save(path)
-    scene_clips = [ImageClip(f"output/frame_{si}_{f}.jpg").set_duration(scene_dur/10) for f in range(10)]
-    clips.append(concatenate_videoclips(scene_clips, method="compose"))
-
-final = concatenate_videoclips(clips, method="compose").set_audio(audio).set_duration(total_dur)
-final.write_videofile("output/final.mp4", fps=24, codec="libx264", audio_codec="aac")
-print(f"VIDEO DONE - {total_dur} sec")
-
-# 4. UPLOAD - SHORTS
-print("Uploading...")
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
-token_info = json.loads(os.environ["YOUTUBE_TOKEN"])
-creds = Credentials.from_authorized_user_info(token_info)
-youtube = build("youtube", "v3", credentials=creds)
-req = youtube.videos().insert(part="snippet,status", body={"snippet": {"title": title+" #Shorts", "description": story[:4000]+"\n\n#Shorts #GudduBholu #HindiKahani", "tags": ["Guddu Bholu","Shorts","Hindi Kahani"], "categoryId": "24"}, "status": {"privacyStatus": "public", "madeForKids": True}}, media_body=MediaFileUpload("output/final.mp4"))
-resp = req.execute()
-print(f"UPLOAD HO GAYA! ID: {resp['id']}")
+    scene_clips = [ImageClip(f"output
