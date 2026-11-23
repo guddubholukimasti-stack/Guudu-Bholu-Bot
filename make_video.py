@@ -9,7 +9,7 @@ def get_new_story():
         print("AI fail: KEY NAHI MILI")
         raise Exception("no key")
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-3.8-flash')
     topics = ["Samosa", "Bhootiya School", "Cricket Match", "Jadui Cycle", "Chor Bazaar", "Mela", "Robot", "Jungle", "Barish", "Exam", "Golgappa", "Diwali", "Train", "Kite"]
     topic = random.choice(topics)
     date = datetime.datetime.now().strftime("%d-%m-%Y")
