@@ -67,3 +67,24 @@ audio = AudioFileClip("output/audio.mp3")
 clip = ImageClip("output/thumbnail.jpg").set_duration(audio.duration).set_audio(audio)
 clip.write_videofile("output/final.mp4", fps=24, codec="libx264", audio_codec="aac")
 print("VIDEO DONE")
+# 5. UPLOAD TO YOUTUBE
+print("Uploading to YouTube...")
+import json, pickle
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.oauth2.credentials import Credentials
+
+token_info = json.loads(os.environ["YOUTUBE_TOKEN"])
+creds = Credentials.from_authorized_user_info(token_info)
+youtube = build("youtube", "v3", credentials=creds)
+
+request = youtube.videos().insert(
+    part="snippet,status",
+    body={
+        "snippet": {"title": title, "description": story[:4000], "tags": ["Guddu Bholu", "Hindi Kahani"], "categoryId": "27"},
+        "status": {"privacyStatus": "public", "madeForKids": True}
+    },
+    media_body=MediaFileUpload("output/final.mp4")
+)
+resp = request.execute()
+print(f"UPLOAD HO GAYA! Video ID: {resp['id']}")
