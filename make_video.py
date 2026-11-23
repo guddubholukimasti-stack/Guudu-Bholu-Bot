@@ -121,4 +121,21 @@ for si, scene_text in enumerate(scenes):
         d.text((80, 1650), f"{title} #Shorts", fill=(255,255,255), font=font_small, stroke_width=2, stroke_fill=(0,0,0))
         path = f"output/frame_{si}_{f}.jpg"
         img.save(path)
-    scene_clips = [ImageClip(f"output
+        scene_clips = [ImageClip(f"output/frame_{si}_{f}.jpg").set_duration(scene_dur/10) for f in range(10)]
+    clips.append(concatenate_videoclips(scene_clips, method="compose"))
+
+final = concatenate_videoclips(clips, method="compose").set_audio(audio).set_duration(total_dur)
+final.write_videofile("output/final.mp4", fps=24, codec="libx264", audio_codec="aac")
+print(f"VIDEO DONE - {total_dur} sec")
+
+# 4. UPLOAD - SHORTS
+print("Uploading...")
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.oauth2.credentials import Credentials
+token_info = json.loads(os.environ["YOUTUBE_TOKEN"])
+creds = Credentials.from_authorized_user_info(token_info)
+youtube = build("youtube", "v3", credentials=creds)
+req = youtube.videos().insert(part="snippet,status", body={"snippet": {"title": title+" #Shorts", "description": story[:4000]+"\n\n#Shorts #GudduBholu #HindiKahani", "tags": ["Guddu Bholu","Shorts","Hindi Kahani"], "categoryId": "24"}, "status": {"privacyStatus": "public", "madeForKids": True}}, media_body=MediaFileUpload("output/final.mp4"))
+resp = req.execute()
+print(f"UPLOAD HO GAYA! ID: {resp['id']}")
