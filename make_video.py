@@ -1,79 +1,69 @@
-import random, os, json, textwrap
-from PIL import Image, ImageDraw
+import os, random, textwrap, datetime
+from PIL import Image, ImageDraw, ImageFont
+
+# 1. GEMINI SE HAR BAAR NAYI KAHANI
+def get_new_story():
+    import google.generativeai as genai
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("AI fail: KEY NAHI MILI")
+        raise Exception("no key")
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    topics = ["Samosa", "Bhootiya School", "Cricket Match", "Jadui Cycle", "Chor Bazaar", "Mela", "Robot", "Jungle", "Barish", "Exam", "Golgappa", "Diwali", "Train", "Kite"]
+    topic = random.choice(topics)
+    date = datetime.datetime.now().strftime("%d-%m-%Y")
+    prompt = f"""Guddu aur Bholu ki ekdam nayi funny Hindi kahani likho. Topic: {topic}. Date: {date}.
+    Sirf is format me do:
+    TITLE: Guddu Bholu Ka {topic} Wala Kamaal
+    STORY: 600 word ki funny kahani. Guddu hoshiyar hai, Bholu bhola hai. End me likhna - Aisi hi kahaniyo ke liye channel ko subscribe karo."""
+    res = model.generate_content(prompt)
+    print("GEMINI SE NAYI KAHANI AA GAYI")
+    return res.text
+
+try:
+    full = get_new_story()
+except Exception as e:
+    print(f"AI fail: {e}")
+    full = "TITLE: Guddu Bholu Ka Golgappa Wala Kamaal\nSTORY: Ek din Guddu aur Bholu golgappa khane gaye. Bholu ne 100 golgappe kha liye aur pet ful gaya. Guddu ne usko paani pilaya aur dono hasne lage. Aisi hi kahaniyo ke liye channel ko subscribe karo"
+
+title = "Guddu Bholu Ki Kahani"
+story = full
+if "TITLE:" in full and "STORY:" in full:
+    title = full.split("TITLE:")[1].split("STORY:")[0].strip().replace("*","").replace("#","")
+    story = full.split("STORY:")[1].strip().replace("*","").replace("#","")
+
+print(f"TITLE: {title}")
+print(f"STORY: {story[:200]}")
+
+# 2. AUDIO
 from gtts import gTTS
-from moviepy import ImageClip, AudioFileClip, CompositeVideoClip
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
+os.makedirs("output", exist_ok=True)
+gTTS(text=story, lang='hi', slow=False).save("output/audio.mp3")
+print("Audio ban gaya")
 
-stories = [
-    ("Guddu: Aaj samosa free hai!", "Bholu: Bhag bhai, jaldi chal!"),
-    ("Bholu: Tera samosa maine kha liya!", "Guddu: Wapas de warna ro dunga!"),
-    ("Guddu: Aaj main star banunga!", "Bholu: Pehle naha ke aa bhai!"),
-]
-title, punch = random.choice(stories)
-text = title + " " + punch
+# 3. THUMBNAIL - BADA TEXT
+img = Image.new("RGB", (1280, 720), (255, 210, 0))
+d = ImageDraw.Draw(img)
+try:
+    font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 95)
+    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 55)
+except:
+    font_big = ImageFont.load_default()
+    font_small = font_big
 
-W, H = 1080, 1920
-# --- BACKGROUND ---
-bg = Image.new('RGB', (W, H), color=(135, 206, 235))
-d = ImageDraw.Draw(bg)
-d.ellipse([850, 80, 1010, 240], fill=(255, 255, 0), outline=(255, 200, 0), width=5)
-d.ellipse([100, 150, 280, 230], fill=(255,255,255))
-d.ellipse([200, 130, 380, 220], fill=(255,255,255))
-d.rectangle([0, 1550, W, H], fill=(34, 139, 34))
-d.rectangle([0, 1550, W, 1580], fill=(100, 200, 100))
-bg.save("bg.jpg")
+lines = textwrap.wrap(title, width=16)
+y = 130
+for line in lines[:2]:
+    d.text((50, y), line, fill=(255,0,0), font=font_big, stroke_width=5, stroke_fill=(0,0,0))
+    y += 120
+d.text((50, 520), "GUDDU BHOLU", fill=(0,0,0), font=font_small)
+img.save("output/thumbnail.jpg")
+print("Thumbnail ban gaya")
 
-# --- CARTOON BANANE KA FUNCTION ---
-def make_character(body_color, shirt, name):
-    im = Image.new('RGBA', (400, 500), (0,0,0,0))
-    dr = ImageDraw.Draw(im)
-    dr.ellipse([50, 0, 350, 300], fill=body_color, outline=(0,0,0), width=6)
-    dr.ellipse([110, 90, 170, 150], fill=(255,255,255))
-    dr.ellipse([230, 90, 290, 150], fill=(255,255,255))
-    dr.ellipse([128, 108, 152, 132], fill=(0,0,0))
-    dr.ellipse([248, 108, 272, 132], fill=(0,0,0))
-    dr.arc([120, 170, 280, 260], 0, 180, fill=(0,0,0), width=6)
-    dr.rectangle([130, 300, 270, 460], fill=shirt, outline=(0,0,0), width=4)
-    dr.text((130, 470), name, fill=(255,255,255))
-    im.save(name + ".png")
-    return name + ".png"
-
-guddu_png = make_character((255, 193, 7), (0, 120, 255), "GUDDU")
-bholu_png = make_character((255, 180, 180), (255, 50, 50), "BHOLU")
-
-# --- SPEECH BUBBLE WALA FRAME ---
-bubble = Image.new('RGBA', (W, 500), (0,0,0,0))
-db = ImageDraw.Draw(bubble)
-db.rounded_rectangle([50, 20, W-50, 480], radius=50, fill=(255,255,255), outline=(0,0,0), width=5)
-db.text((90, 70), "\n".join(textwrap.wrap(title, width=28)), fill=(0,0,0))
-db.text((90, 250), "\n".join(textwrap.wrap(punch, width=28)), fill=(200,0,0))
-bubble.save("bubble.png")
-
-# --- AUDIO ---
-tts = gTTS(text=text, lang='hi')
-tts.save("voice.mp3")
-audio = AudioFileClip("voice.mp3")
-dur = audio.duration
-
-# --- MOTION ---
-bg_clip = ImageClip("bg.jpg").with_duration(dur).resized(lambda t: 1 + 0.03*t/dur)
-guddu_clip = ImageClip(guddu_png).with_duration(dur).resized(0.85).with_position(lambda t: (100, 1050 + int(30*abs(__import__('math').sin(t*4)))))
-bholu_clip = ImageClip(bholu_png).with_duration(dur).resized(0.85).with_position(lambda t: (600, 1050 + int(30*abs(__import__('math').cos(t*4)))))
-bubble_clip = ImageClip("bubble.png").with_duration(dur).with_position((0, 350))
-
-final = CompositeVideoClip([bg_clip, guddu_clip, bholu_clip, bubble_clip], size=(W, H)).with_audio(audio)
-final.write_videofile("final_video.mp4", fps=24)
-print("VIDEO BAN GAYA!")
-
-# --- UPLOAD ---
-token_info = json.loads(os.environ["YOUTUBE_TOKEN"])
-creds = Credentials.from_authorized_user_info(token_info)
-youtube = build("youtube", "v3", credentials=creds)
-req = youtube.videos().insert(
-    part="snippet,status",
-    body={"snippet": {"title": title + " | Guddu Bholu Comedy Shorts", "description": punch + "\n\n#shorts #guddu #bholu #comedy #cartoon", "categoryId": "23"}, "status": {"privacyStatus": "public"}},
-    media_body=MediaFileUpload("final_video.mp4")
-)
-print("UPLOAD HO GAYA!", req.execute()["id"])
+# 4. VIDEO
+from moviepy.editor import ImageClip, AudioFileClip
+audio = AudioFileClip("output/audio.mp3")
+clip = ImageClip("output/thumbnail.jpg").set_duration(audio.duration).set_audio(audio)
+clip.write_videofile("output/final.mp4", fps=24, codec="libx264", audio_codec="aac")
+print("VIDEO DONE")
