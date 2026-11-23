@@ -1,10 +1,9 @@
 import os, random, textwrap, datetime, math, json
 from PIL import Image, ImageDraw, ImageFont
 
-# 1. KAHANI - 6 KEY ROTATION
+# 1. KAHANI - NAYA google.genai - 6 KEY ROTATION
 def get_new_story():
-    import google.generativeai as genai
-    
+    from google import genai
     all_keys = []
     for suffix in ["", "_1", "_2", "_3", "_4", "_5"]:
         k = os.environ.get(f"GEMINI_API_KEY{suffix}")
@@ -13,29 +12,22 @@ def get_new_story():
     print(f"Total Keys Mili: {len(all_keys)}")
     if not all_keys:
         raise Exception("no key")
-
     topics = ["Samosa","Bhootiya School","Cricket Match","Jadui Cycle","Chor Bazaar","Mela","Robot","Jungle","Barish","Exam","Golgappa","Diwali","Train","Kite"]
     topic = random.choice(topics)
     prompt = f"""Guddu aur Bholu ki funny Hindi kahani likho. Topic: {topic}. Sirf is format me do: TITLE: Guddu Bholu Ka {topic} Wala Kamaal STORY: 150 word ki funny kahani. 6 chhote scene me. Guddu hoshiyar, Bholu bhola. End me - subscribe karo."""
-    
-    # NAYE MODEL - 2026 me chalu wale
-    to_try = ['gemini-3.8-flash', 'gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.5-flash-lite']
+    to_try = ['gemini-2.5-flash', 'gemini-2.0-flash']
     for key_no, api_key in enumerate(all_keys):
         try:
             print(f"--- Key {key_no+1} try kar raha hu ---")
-            genai.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
             for model_name in to_try:
                 try:
                     print(f"Trying: Key {key_no+1} + {model_name}")
-                    model = genai.GenerativeModel(model_name)
-                    res = model.generate_content(prompt)
+                    res = client.models.generate_content(model=model_name, contents=prompt)
                     print(f"CHAL GAYA: Key {key_no+1} + {model_name}")
                     return res.text
                 except Exception as e:
                     print(f"Fail {model_name}: {e}")
-                    if "429" in str(e) or "quota" in str(e).lower():
-                        print(f"Key {key_no+1} ki limit khatam, agli key pe ja raha hu")
-                        break
                     continue
         except Exception as e:
             print(f"Key {key_no+1} fail: {e}")
@@ -99,7 +91,6 @@ for i in range(6):
 
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 audio = AudioFileClip("output/audio.mp3")
-# FIX: Video ki lambai hamesha Audio jitni hi hogi, 55-60 force nahi karenge
 total_dur = audio.duration
 print(f"Audio Duration: {total_dur} sec, Video bhi utna hi banega")
 scene_dur = total_dur / 6
@@ -119,9 +110,8 @@ for si, scene_text in enumerate(scenes):
             d.text((80, y), line, fill=(0,0,0), font=font_big)
             y += 90
         d.text((80, 1650), f"{title} #Shorts", fill=(255,255,255), font=font_small, stroke_width=2, stroke_fill=(0,0,0))
-        path = f"output/frame_{si}_{f}.jpg"
-        img.save(path)
-        scene_clips = [ImageClip(f"output/frame_{si}_{f}.jpg").set_duration(scene_dur/10) for f in range(10)]
+        img.save(f"output/frame_{si}_{f}.jpg")
+    scene_clips = [ImageClip(f"output/frame_{si}_{f}.jpg").set_duration(scene_dur/10) for f in range(10)]
     clips.append(concatenate_videoclips(scene_clips, method="compose"))
 
 final = concatenate_videoclips(clips, method="compose").set_audio(audio).set_duration(total_dur)
