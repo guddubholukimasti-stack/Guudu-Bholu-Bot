@@ -66,9 +66,19 @@ Sirf dialogue de, aise:
 Guddu: ...
 Bholu: ...
 """
-chat = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
-    messages=[{"role": "user", "content": prompt}]
+models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
+script = None
+for m in models:
+    try:
+        chat = client.chat.completions.create(model=m, messages=[{"role": "user", "content": prompt}])
+        script = chat.choices[0].message.content
+        print(f"Model chala: {m}")
+        break
+    except Exception as e:
+        print(f"Model fail {m}: {e}")
+        continue
+if not script:
+    script = "Guddu: Aaj bada kaam hai bhai. Bholu: Kaunsa kaam? Guddu: Ghar todne ka kaam hai. Bholu: To chal jaldi, wait for end."
 )
 script = chat.choices[0].message.content
 print("SCRIPT:", script)
