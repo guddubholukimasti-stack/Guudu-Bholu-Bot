@@ -2,13 +2,11 @@ import os, random, datetime
 import textwrap, math, json, subprocess
 from PIL import Image, ImageDraw, ImageFont
 
-# ============ DATE - HAR ROZ ALAG ============
 today = datetime.datetime.now()
 day_num = today.timetuple().tm_yday
 random.seed(day_num)
 print("Aaj:", today.strftime("%d %b"), "Day:", day_num)
 
-# ============ 1. KAHANI - 10 KAHANI, ROZ ALAG, LAMBI, REPEAT NAHI ============
 def get_new_story():
     stories = [
         ("Guddu ne Bholu ka samosa kha liya", "samosa", "Ek din Guddu aur Bholu mela ghoomne gaye. Mela me bahut bheed thi aur samose ki khushboo aa rahi thi. Bholu ne apne paise se ek garam samosa liya. Bholu bola bhai ye samosa to bahut tasty lag raha hai. Guddu ne bola mujhe bhi thoda taste karne de. Bholu ne bola nahi ye mera samosa hai. Guddu ne chupke se samosa utha liya aur kha gaya. Bholu bola are mera samosa kahan gaya. Guddu bola maine to bas dekha tha, samosa to ud gaya. Bholu ko bahut gussa aa gaya. Guddu ko apni galti samajh aa gayi. Guddu bola sorry bhai, chal me tujhe do samose khilata hu. Dono ne milke samosa khaya aur bahut hasse. Aakhir me dono haste hue ghar gaye."),
@@ -24,24 +22,22 @@ def get_new_story():
     ]
     idx = day_num % len(stories)
     top_text, red_word, story = stories[idx]
-    print(f"Aaj ki kahani No. {idx+1}/{len(stories)} : {top_text}")
-    story += " Subscribe karo."
+    print("Aaj ki kahani No.", idx + 1, ":", top_text)
+    story = story + " Subscribe karo."
     title = top_text + " | Guddu Bholu Comedy"
     return title, top_text, red_word, story
 
 title, top_text, red_word, story = get_new_story()
 print("TITLE:", title)
 
-# ============ 2. AUDIO - EK BAAR, CARTOON VOICE, REPEAT NAHI ============
 from gtts import gTTS
 from moviepy.editor import AudioFileClip
 os.makedirs("output", exist_ok=True)
-gTTS(text=story, lang='hi', slow=False).save("output/audio_raw.mp3")
+gTTS(text=story, lang="hi", slow=False).save("output/audio_raw.mp3")
 subprocess.run(["ffmpeg", "-y", "-i", "output/audio_raw.mp3", "-filter:a", "asetrate=44100*1.25,aresample=44100,atempo=0.95", "output/audio.mp3"], check=True)
 d = AudioFileClip("output/audio.mp3").duration
-print("Audio:", d, "sec - ek hi kahani, repeat nahi, cartoon voice")
+print("Audio:", d, "sec")
 
-# ============ 3. VIDEO - MR COMEDY STYLE ============
 W, H = 1080, 1920
 F = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 try:
@@ -64,22 +60,21 @@ BGS = [
 random.shuffle(BGS)
 print("Aaj ka background:", [b[2] for b in BGS])
 
-# POSE - BAAT KE HISAB SE, FALTU NAHI HILEGA
 def get_pose(scene_text):
     t = scene_text.lower()
     if "gussa" in t:
         return "gussa"
     if "sorry" in t or "galti" in t:
         return "sorry"
-    if "samosa" in t and ("khaya" in t or "kha" in t or "khayenge" in t):
+    if "samosa" in t and "kha" in t:
         return "kha_raha"
-    if "paise" in t and ("diye" in t or "mil" in t):
+    if "paise" in t and "diye" in t:
         return "khush"
     if "dar" in t:
         return "dar"
     if "has" in t or "maza" in t or "khush" in t or "party" in t or "jeet" in t:
         return "khush"
-    if "bola" in t or "samjha" in t:
+    if "bola" in t:
         return "samjha_raha"
     return "normal"
 
@@ -92,9 +87,22 @@ def draw_full_body(d, cx, cy, col, shirt, name, fr, talk, pose):
         y = cy + 10
         lean = 15
     elif pose == "dar":
-        y = cy + int(math.sin(fr*1.2)*6)
+        y = cy + 6
         lean = -10
     elif pose == "khush":
-        y = cy + int(math.sin(fr*0.6)*15)
+        y = cy + 12
+        lean = 0
     else:
-        y = cy + int(math.sin(fr*0.3)*
+        y = cy + 3
+        lean = 0
+    cx = cx + lean
+    d.rectangle([cx-55, y+280, cx-15, y+420], fill=(30,30,200), outline=(0,0,0), width=4)
+    d.rectangle([cx+15, y+280, cx+55, y+420], fill=(30,30,200), outline=(0,0,0), width=4)
+    d.rectangle([cx-110, y+80, cx+110, y+290], fill=shirt, outline=(0,0,0), width=6)
+    d.ellipse([cx-80, y+170, cx+80, y+280], fill=shirt, outline=(0,0,0), width=4)
+    if pose == "gussa":
+        d.ellipse([cx-160, y+200, cx-100, y+260], fill=col, outline=(0,0,0), width=4)
+        d.ellipse([cx+100, y+200, cx+160, y+260], fill=col, outline=(0,0,0), width=4)
+    elif pose == "sorry":
+        d.ellipse([cx-30, y+130, cx+30, y+210], fill=col, outline=(0,0,0), width=4)
+        d.line([cx, y+130, cx,
