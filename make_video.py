@@ -1,4 +1,4 @@
-import os, requests, subprocess, sys
+import os, requests, subprocess, sys, re
 from pathlib import Path
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -7,11 +7,9 @@ CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET")
 REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
 
-print("Keys check:", bool(HF_TOKEN), bool(GROQ_KEY))
-
 # 1. SCRIPT
 script = ""
-prompt = "Guddu aur Bholu ki funny Hindi story likho, 60 second ki. Guddu hoshiyar hai, Bholu gadha hai. Dialog format me likho Guddu: ... Bholu: ... End me twist rakho. Sirf dialog likho."
+prompt = "Guddu aur Bholu ki funny Hindi story likho, 60 second ki. 3 scene me likho. Scene 1: Ghar, Scene 2: Bahar, Scene 3: Twist. Dialog format me Guddu: ... Bholu: ... End me twist rakho."
 
 try:
     from groq import Groq
@@ -24,7 +22,7 @@ try:
             print("Model chala:", m)
             break
         except Exception as e:
-            print("Model fail:", m, e)
+            print("Model fail:", m)
             continue
 except Exception as e:
     print("Groq error:", e)
@@ -39,50 +37,53 @@ print("SCRIPT OK")
 lines = [l.strip() for l in script.splitlines() if ":" in l]
 clean = " ".join([l.split(":", 1)[1].strip() for l in lines]) if lines else script
 clean = clean[:900]
-print("VOICE TEXT:", clean[:80])
-
 subprocess.run([sys.executable, "-m", "edge_tts", "--voice", "hi-IN-MadhurNeural", "--file", "voice.mp3", "--text", clean], check=True)
 print("Voice ban gayi")
 
-# 3. IMAGE
-has_image = False
+# 3. SCENE KE HISAB SE 3 BACKGROUND IMAGE
+def make_image(prompt_text, out):
+    try:
+        headers = {"Authorization": "Bearer " + str(HF_TOKEN)}
+        r = requests.post("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0", headers=headers, json={"inputs": prompt_text}, timeout=120)
+        if r.status_code == 200:
+            open(out, "wb").write(r.content)
+            print("Image ban gayi:", out)
+            return True
+    except Exception as e:
+        print("Image fail:", e)
+    return False
+
+# Script se scene nikal ke prompt banao
+scene1 = "Cute cartoon Indian kids in a house, 3D cartoon style, bright colors"
+scene2 = "Cute cartoon Indian kids outside in village street, 3D cartoon style, bright colors"
+scene3 = "Cute cartoon Indian kids surprised and laughing, funny twist, 3D cartoon style"
+
+# Agar script me jungle / school / dukaan word hai to us hisab se badlo
+low = script.lower()
+if "jungle" in low or "jangal" in low:
+    scene2 = "Cute cartoon Indian kids in jungle, funny, 3D cartoon style"
+if "school" in low:
+    scene1 = "Cute cartoon Indian kids in school classroom, 3D cartoon style"
+if "dukaan" in low or "bazaar" in low:
+    scene2 = "Cute cartoon Indian kids in market shop, 3D cartoon style"
+
+ok1 = make_image(scene1, "img1.jpg")
+ok2 = make_image(scene2, "img2.jpg")
+ok3 = make_image(scene3, "img3.jpg")
+
+# 4. BACKGROUND MUSIC DOWNLOAD - Free funny music
 try:
-    headers = {"Authorization": "Bearer " + str(HF_TOKEN)}
-    img_prompt = "Cute cartoon Indian kids, two funny boys, colorful village, 3D cartoon style"
-    r = requests.post("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0", headers=headers, json={"inputs": img_prompt}, timeout=120)
-    if r.status_code == 200:
-        open("image.jpg", "wb").write(r.content)
-        has_image = True
-        print("Image ban gayi")
-    else:
-        print("HF fail:", r.status_code)
+    music_url = "https://cdn.pixabay.com/download/audio/2022/03/10/audio_2c8c7b6b3e.mp3"
+    r = requests.get(music_url, timeout=30)
+    open("music.mp3", "wb").write(r.content)
+    print("Music aa gayi")
+    has_music = True
 except Exception as e:
-    print("HF error:", e)
+    print("Music fail, bina music ke banega:", e)
+    has_music = False
 
-# 4. VIDEO
-if has_image:
-    cmd = ["ffmpeg", "-y", "-loop", "1", "-i", "image.jpg", "-i", "voice.mp3", "-c:v", "libx264", "-t", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "final_video.mp4"]
-else:
-    cmd = ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=0x1a1a2e:s=720x1280:d=30", "-i", "voice.mp3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "final_video.mp4"]
-
-subprocess.run(cmd, check=True)
-print("Video ban gaya")
-
-# 5. UPLOAD
-try:
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload
-    from google.oauth2.credentials import Credentials
-
-    creds = Credentials(None, refresh_token=REFRESH_TOKEN, token_uri="https://oauth2.googleapis.com/token", client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
-    yt = build("youtube", "v3", credentials=creds)
-    title = "Guddu Bholu Ki Funny Story | Wait For End #shorts"
-    desc = script[:1000] + "\n\n#guddu #bholu #funny #shorts"
-    body_data = {}
-    body_data["snippet"] = {"title": title, "description": desc, "tags": ["guddu", "bholu", "funny", "shorts"], "categoryId": "23"}
-    body_data["status"] = {"privacyStatus": "public", "selfDeclaredMadeForKids": True}
-    req = yt.videos().insert(part="snippet,status", body=body_data, media_body=MediaFileUpload("final_video.mp4"))
-    res = req.execute()
-    print("UPLOAD HO GAYA:", res["id"])
-except Exception as e:
-    print("Upload fail:", e)
+# 5. VIDEO BANANA - 3 Image badlenge
+if ok1 and ok2 and ok3:
+    # 3 image ko 10-10 sec ke liye jodo
+    open("list.txt", "w").write("file 'img1.jpg'\nduration 10\nfile 'img2.jpg'\nduration 10\nfile 'img3.jpg'\nduration 10\nfile 'img3.jpg'\n")
+    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", "voice.mp3", "-c:v", "libx264", "-
