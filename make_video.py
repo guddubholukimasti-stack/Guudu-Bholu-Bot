@@ -12,7 +12,7 @@ REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
 
 # 1 SCRIPT
 script = ""
-prompt = "Guddu aur Bholu ki funny Hindi story likho. 3 scene me. Dialog me. Guddu: Bholu: End me twist."
+prompt = "Guddu aur Bholu ki funny Hindi story likho. 3 scene me. Sirf dialog likho. Jaise Guddu: ... Bholu: ... Koi bracket, koi star, koi heading mat likho."
 
 try:
     from groq import Groq
@@ -54,7 +54,15 @@ for l in script.splitlines():
 clean = ""
 for l in lines:
     parts = l.split(":", 1)
-    clean = clean + parts[1].strip() + " "
+    t = parts[1].strip()
+    t = t.replace("**", "")
+    t = t.replace("*", "")
+    t = t.replace("(", "")
+    t = t.replace(")", "")
+    t = t.replace("[", "")
+    t = t.replace("]", "")
+    t = t.replace("#", "")
+    clean = clean + t + " "
 clean = clean[:900]
 
 subprocess.run(
@@ -66,7 +74,7 @@ subprocess.run(
 )
 print("Voice ban gayi")
 
-# 3 IMAGE FUNCTION
+# 3 IMAGE
 def make_image(prompt_text, out):
     try:
         headers = {}
@@ -110,58 +118,27 @@ try:
 except Exception as e:
     print("Music fail:", e)
 
-# 5 VIDEO
-if ok1 and ok2 and ok3:
-    f = open("list.txt", "w")
-    f.write("file 'img1.jpg'\n")
-    f.write("duration 10\n")
-    f.write("file 'img2.jpg'\n")
-    f.write("duration 10\n")
-    f.write("file 'img3.jpg'\n")
-    f.write("duration 10\n")
-    f.write("file 'img3.jpg'\n")
-    f.close()
-    cmd = []
-    cmd.append("ffmpeg")
-    cmd.append("-y")
-    cmd.append("-f")
-    cmd.append("concat")
-    cmd.append("-safe")
-    cmd.append("0")
-    cmd.append("-i")
-    cmd.append("list.txt")
-    cmd.append("-i")
-    cmd.append("voice.mp3")
-    cmd.append("-c:v")
-    cmd.append("libx264")
-    cmd.append("-pix_fmt")
-    cmd.append("yuv420p")
-    cmd.append("-c:a")
-    cmd.append("aac")
-    cmd.append("-shortest")
-    cmd.append("temp.mp4")
-    subprocess.run(cmd, check=True)
-else:
-    cmd2 = []
-    cmd2.append("ffmpeg")
-    cmd2.append("-y")
-    cmd2.append("-loop")
-    cmd2.append("1")
-    cmd2.append("-i")
-    cmd2.append("img1.jpg")
-    cmd2.append("-i")
-    cmd2.append("voice.mp3")
-    cmd2.append("-c:v")
-    cmd2.append("libx264")
-    cmd2.append("-t")
-    cmd2.append("30")
-    cmd2.append("-pix_fmt")
-    cmd2.append("yuv420p")
-    cmd2.append("-c:a")
-    cmd2.append("aac")
-    cmd2.append("-shortest")
-    cmd2.append("temp.mp4")
-    subprocess.run(cmd2, check=True)
+# 5 VIDEO - 1 Image se
+cmd = []
+cmd.append("ffmpeg")
+cmd.append("-y")
+cmd.append("-loop")
+cmd.append("1")
+cmd.append("-i")
+cmd.append("img1.jpg")
+cmd.append("-i")
+cmd.append("voice.mp3")
+cmd.append("-c:v")
+cmd.append("libx264")
+cmd.append("-t")
+cmd.append("30")
+cmd.append("-pix_fmt")
+cmd.append("yuv420p")
+cmd.append("-c:a")
+cmd.append("aac")
+cmd.append("-shortest")
+cmd.append("temp.mp4")
+subprocess.run(cmd, check=True)
 
 # 6 MUSIC MIX
 if has_music:
