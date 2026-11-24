@@ -152,8 +152,23 @@ except Exception as e:
     print("Mix fail, temp ko hi final bana raha hu")
     if Path("temp.mp4").exists():
         shutil.copy("temp.mp4", "final_video.mp4")
-
 # 7 UPLOAD - fail hua to video save rahega
+upload_ok = False
 try:
     from googleapiclient.discovery import build
-    from googleapiclient.http import Media
+    from googleapiclient.http import MediaFileUpload
+    from google.oauth2.credentials import Credentials
+    creds = Credentials(None, refresh_token=REFRESH_TOKEN, token_uri="https://oauth2.googleapis.com/token", client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+    yt = build("youtube", "v3", credentials=creds)
+    snippet = {"title": "Guddu Bholu Ki Funny Story | Wait For End #shorts", "description": script[:1000] + "\n\n#guddu #bholu #funny #shorts", "tags": ["guddu", "bholu", "funny", "shorts"], "categoryId": "23"}
+    status = {"privacyStatus": "public", "selfDeclaredMadeForKids": True}
+    req = yt.videos().insert(part="snippet,status", body={"snippet": snippet, "status": status}, media_body=MediaFileUpload("final_video.mp4"))
+    res = req.execute()
+    print("UPLOAD HO GAYA:", res["id"])
+    upload_ok = True
+except Exception as e:
+    print("Upload fail, par video save hai:", e)
+
+print("=== SAB HO GAYA ===")
+
+    
