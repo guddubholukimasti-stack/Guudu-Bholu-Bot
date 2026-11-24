@@ -2,6 +2,7 @@ import os
 import requests
 import subprocess
 import sys
+import asyncio
 from pathlib import Path
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -12,7 +13,7 @@ REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN")
 
 # 1 SCRIPT
 script = ""
-prompt = "Guddu aur Bholu ki funny Hindi story likho. 3 scene me. Sirf dialog likho. Jaise Guddu: ... Bholu: ... Koi bracket, koi star, koi heading mat likho."
+prompt = "Guddu aur Bholu ki funny Hindi story likho. Sirf dialog likho. Jaise Guddu: ... Bholu: ... Koi bracket, koi star mat likho. 8 dialog se zyada mat likho."
 
 try:
     from groq import Groq
@@ -45,11 +46,12 @@ if not script:
 Path("script.txt").write_text(script, encoding="utf-8")
 print("SCRIPT OK")
 
-# 2 VOICE
+# 2 VOICE - Naya tareeka, command nahi
 lines = []
 for l in script.splitlines():
     if ":" in l:
         lines.append(l.strip())
+lines = lines[:8]
 
 clean = ""
 for l in lines:
@@ -63,15 +65,15 @@ for l in lines:
     t = t.replace("]", "")
     t = t.replace("#", "")
     clean = clean + t + " "
-clean = clean[:900]
+clean = clean[:600]
+print("Voice text:", clean)
 
-subprocess.run(
-    [sys.executable, "-m", "edge_tts",
-     "--voice", "hi-IN-MadhurNeural",
-     "--file", "voice.mp3",
-     "--text", clean],
-    check=True
-)
+async def make_voice():
+    import edge_tts
+    com = edge_tts.Communicate(clean, "hi-IN-MadhurNeural")
+    await com.save("voice.mp3")
+
+asyncio.run(make_voice())
 print("Voice ban gayi")
 
 # 3 IMAGE
@@ -93,7 +95,6 @@ def make_image(prompt_text, out):
 
 scene1 = "Cute cartoon Indian kids in house, 3D cartoon"
 scene2 = "Cute cartoon Indian kids in village street, 3D cartoon"
-scene3 = "Cute cartoon Indian kids laughing, funny twist, 3D cartoon"
 
 low = script.lower()
 if "jungle" in low:
@@ -104,8 +105,6 @@ if "dukaan" in low:
     scene2 = "Cute cartoon Indian kids in market, 3D cartoon"
 
 ok1 = make_image(scene1, "img1.jpg")
-ok2 = make_image(scene2, "img2.jpg")
-ok3 = make_image(scene3, "img3.jpg")
 
 # 4 MUSIC
 has_music = False
@@ -118,7 +117,7 @@ try:
 except Exception as e:
     print("Music fail:", e)
 
-# 5 VIDEO - 1 Image se
+# 5 VIDEO
 cmd = []
 cmd.append("ffmpeg")
 cmd.append("-y")
